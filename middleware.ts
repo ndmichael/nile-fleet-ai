@@ -1,10 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-/**
- * Middleware keeps the auth session fresh and lets us
- * protect dashboard routes before the page loads.
- */
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -21,7 +17,7 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
 
@@ -50,21 +46,44 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/forgot-password") ||
     pathname.startsWith("/reset-password");
 
-  const isDashboardPage =
+  const isProtectedPage =
     pathname.startsWith("/staff") ||
     pathname.startsWith("/approver") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/driver");
 
-  // If a user is not logged in, block dashboard access.
-  if (!user && isDashboardPage) {
+  if (!user && isProtectedPage) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // If a user is logged in, don't let them sit on the login page.
-  // We will improve this later to redirect by actual role.
-  if (user && isAuthPage) {
-    return NextResponse.redirect(new URL("/staff/dashboard", request.url));
+  let role: "staff" | "approver" | "admin" | "driver" | null = null;
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    role = profile?.role ?? null;
+  }
+
+  // Logged-in users should not remain on auth pages
+  if (user && role && isAuthPage) {
+    return NextResponse.redirect(new URL(`/${role}/dashboard`, request.url));
+  }
+
+  // Block role mismatch
+  if (user && role) {
+    const wrongSection =
+      (pathname.startsWith("/staff") && role !== "staff") ||
+      (pathname.startsWith("/approver") && role !== "approver") ||
+      (pathname.startsWith("/admin") && role !== "admin") ||
+      (pathname.startsWith("/driver") && role !== "driver");
+
+    if (wrongSection) {
+      return NextResponse.redirect(new URL(`/${role}/dashboard`, request.url));
+    }
   }
 
   return response;
