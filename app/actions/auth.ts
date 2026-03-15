@@ -20,14 +20,45 @@ export async function signInWithPassword(
 
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { error: signInError } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
-  if (error) {
-    return { error: error.message };
+  if (signInError) {
+    return { error: signInError.message };
   }
 
-  redirect("/staff/dashboard");
+  // After login, fetch the user's app role from profiles
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { error: "Unable to load authenticated user." };
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile) {
+    return { error: "Profile not found. Please contact the administrator." };
+  }
+
+  switch (profile.role) {
+    case "staff":
+      redirect("/staff/dashboard");
+    case "approver":
+      redirect("/approver/dashboard");
+    case "admin":
+      redirect("/admin/dashboard");
+    case "driver":
+      redirect("/driver/dashboard");
+    default:
+      return { error: "Invalid user role." };
+  }
 }
