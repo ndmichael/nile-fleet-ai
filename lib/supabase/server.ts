@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 /**
- * Server client for server components / protected pages.
+ * Server-side Supabase client for server components and actions.
  */
 export async function createClient() {
   const cookieStore = await cookies();
@@ -15,9 +15,10 @@ export async function createClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll() {
-          // We keep this simple for now.
-          // Middleware/session refresh can be added later if needed.
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
         },
       },
     }
