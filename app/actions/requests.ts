@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/data/get-current-profile";
 
 export type RequestFormState = {
   error?: string;
@@ -17,14 +18,35 @@ export async function createTransportRequest(
   formData: FormData
 ): Promise<RequestFormState> {
   const supabase = await createClient();
+  const profile = await getCurrentProfile();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
+  if (!profile) {
     return { error: "You must be logged in to submit a request." };
+  }
+
+  if (profile.role !== "staff") {
+    return { error: "Only staff users can submit transport requests." };
+  }
+
+  // Block multiple active requests for the same staff user.
+  const { data: existingActiveRequest, error: existingRequestError } =
+    await supabase
+      .from("requests")
+      .select("id, request_code, status")
+      .eq("staff_profile_id", profile.id)
+      .in("status", ["pending", "approved", "allocated", "in_trip"])
+      .limit(1)
+      .maybeSingle();
+
+  if (existingRequestError) {
+    return { error: "Unable to validate existing requests right now." };
+  }
+
+  if (existingActiveRequest) {
+    return {
+      error:
+        "You already have an active request in the system. Complete or resolve it before creating another one.",
+    };
   }
 
   const destination = String(formData.get("destination") ?? "").trim();
@@ -43,8 +65,8 @@ export async function createTransportRequest(
 
   const { error } = await supabase.from("requests").insert({
     request_code: makeRequestCode(),
-    staff_profile_id: user.id,
-    unit_id: unitId || null,
+    staff_profile_id: profile.id,
+    unit_id: unitId || profile.unit_id || null,
     destination,
     purpose,
     passenger_count: passengerCount,
@@ -60,8 +82,9 @@ export async function createTransportRequest(
     return { error: error.message };
   }
 
-  revalidatePath("/staff/requests/my-requests");
   revalidatePath("/staff/dashboard");
+  revalidatePath("/staff/requests/my-requests");
+  revalidatePath("/staff/requests/new");
 
   return { success: "Transport request submitted successfully." };
 }

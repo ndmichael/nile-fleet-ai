@@ -8,7 +8,6 @@ import {
   Route,
   ShieldCheck,
 } from "lucide-react";
-import { toast } from "sonner";
 
 const features = [
   {
