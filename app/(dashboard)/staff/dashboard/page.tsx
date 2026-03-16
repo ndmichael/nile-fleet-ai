@@ -9,9 +9,11 @@ import { StatCard } from "@/components/shared/stat-card";
 import { DashboardPageToast } from "@/components/dashboard/dashboard-page-toast";
 import { getStaffDashboardData } from "@/lib/data/get-staff-dashboard-data";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { getStaffDashboardAISummary } from "@/lib/data/get-staff-dashboard-ai-summary";
 
 export default async function StaffDashboardPage() {
-  const dashboardData = await getStaffDashboardData();
+    const dashboardData = await getStaffDashboardData();
+    const aiSummary = await getStaffDashboardAISummary();
 
   return (
     <>
@@ -105,38 +107,47 @@ export default async function StaffDashboardPage() {
             <div className="space-y-6">
               <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-                  AI Insights
+                    AI Insights
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Sample recommendation preview based on recent request patterns.
+                    Latest recommendation generated from your most recent request activity.
                 </p>
 
                 <div className="mt-6 space-y-4">
-                  <div className="rounded-2xl bg-slate-50 p-4">
+                    <div className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                      Estimated Duration
+                        Estimated Duration
                     </p>
                     <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-                      1h 20m
+                        {aiSummary.estimatedDuration}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
-                      Suggested return window for a medium-distance official trip
+                        AI-generated travel time estimate for your latest request
                     </p>
-                  </div>
+                    </div>
 
-                  <div className="rounded-2xl bg-slate-50 p-4">
+                    <div className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                      Recommended Vehicle
+                        Recommended Vehicle
                     </p>
                     <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-                      Standard SUV
+                        {aiSummary.recommendedVehicle}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
-                      Based on passenger count, route class, and trip purpose
+                        Suggested category based on route, purpose, and passenger demand
                     </p>
-                  </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-slate-50 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        AI Reason
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                        {aiSummary.note}
+                    </p>
+                    </div>
                 </div>
-              </div>
+                </div>
 
               <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-semibold tracking-tight text-slate-950">

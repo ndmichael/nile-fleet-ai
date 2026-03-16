@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/data/get-current-profile";
+import { getRequestInsights } from "@/lib/ai/request-insights";
 
 export type RequestFormState = {
   error?: string;
@@ -28,7 +29,6 @@ export async function createTransportRequest(
     return { error: "Only staff users can submit transport requests." };
   }
 
-  // Block multiple active requests for the same staff user.
   const { data: existingActiveRequest, error: existingRequestError } =
     await supabase
       .from("requests")
@@ -63,23 +63,47 @@ export async function createTransportRequest(
     return { error: "Please complete all required request fields." };
   }
 
-  const { error } = await supabase.from("requests").insert({
-    request_code: makeRequestCode(),
-    staff_profile_id: profile.id,
-    unit_id: unitId || profile.unit_id || null,
+  const insights = getRequestInsights({
     destination,
-    purpose,
-    passenger_count: passengerCount,
-    departure_date: departureDate,
-    departure_time: departureTime,
-    expected_return_date: expectedReturnDate || null,
-    trip_type: tripType || null,
-    notes: notes || null,
-    status: "pending",
+    passengerCount,
+    tripType,
   });
 
-  if (error) {
-    return { error: error.message };
+  const requestCode = makeRequestCode();
+
+  const { data: insertedRequest, error: requestError } = await supabase
+    .from("requests")
+    .insert({
+      request_code: requestCode,
+      staff_profile_id: profile.id,
+      unit_id: unitId || profile.unit_id || null,
+      destination,
+      purpose,
+      passenger_count: passengerCount,
+      departure_date: departureDate,
+      departure_time: departureTime,
+      expected_return_date: expectedReturnDate || null,
+      trip_type: tripType || null,
+      notes: notes || null,
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  if (requestError || !insertedRequest) {
+    return { error: requestError?.message || "Failed to create request." };
+  }
+
+  const { error: aiLogError } = await supabase.from("ai_logs").insert({
+    request_id: insertedRequest.id,
+    estimated_duration_minutes: insights.estimatedDurationMinutes,
+    recommended_vehicle_category: insights.recommendedVehicleCategory,
+    risk_flag: insights.riskLevel.toLowerCase(),
+    reason: insights.note,
+  });
+
+  if (aiLogError) {
+    return { error: aiLogError.message };
   }
 
   revalidatePath("/staff/dashboard");
