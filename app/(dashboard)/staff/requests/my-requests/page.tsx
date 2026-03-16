@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { getCurrentProfile } from "@/lib/data/get-current-profile";
@@ -68,6 +69,7 @@ export default async function MyRequestsPage() {
                 <th className="px-4 py-3 font-medium">Purpose</th>
                 <th className="px-4 py-3 font-medium">Date</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white text-sm">
@@ -89,12 +91,20 @@ export default async function MyRequestsPage() {
                     <td className="px-4 py-4">
                       <StatusBadge status={request.status} />
                     </td>
+                    <td className="px-4 py-4">
+                      <Link
+                        href={`/staff/requests/${request.id}`}
+                        className="inline-flex rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                      >
+                        View
+                      </Link>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-4 py-10 text-center text-sm text-slate-500"
                   >
                     No transport requests found yet.
