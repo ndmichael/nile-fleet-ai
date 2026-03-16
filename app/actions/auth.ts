@@ -62,3 +62,9 @@ export async function signInWithPassword(
       return { error: "Invalid user role." };
   }
 }
+
+export async function signOut() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/login");
+}
