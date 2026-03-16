@@ -51,13 +51,13 @@ export async function signInWithPassword(
 
   switch (profile.role) {
     case "staff":
-      redirect("/staff/dashboard");
+        redirect("/staff/dashboard?login=success");
     case "approver":
-      redirect("/approver/dashboard");
+        redirect("/approver/dashboard?login=success");
     case "admin":
-      redirect("/admin/dashboard");
+        redirect("/admin/dashboard?login=success");
     case "driver":
-      redirect("/driver/dashboard");
+        redirect("/driver/dashboard?login=success");
     default:
       return { error: "Invalid user role." };
   }
@@ -66,5 +66,5 @@ export async function signInWithPassword(
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/login");
+  redirect("/login?logout=success");
 }
