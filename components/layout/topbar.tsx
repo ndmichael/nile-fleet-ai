@@ -1,7 +1,7 @@
 "use client";
 
-import { Bell, LogOut, Menu, Search } from "lucide-react";
-import { signOut } from "@/app/actions/auth";
+import { LogoutButton } from "@/components/auth/logout-button";
+import { Bell, Menu, Search } from "lucide-react";
 
 type TopbarProps = {
   title: string;
@@ -43,15 +43,7 @@ export function Topbar({ title, subtitle, onOpenSidebar }: TopbarProps) {
               <Bell className="h-4 w-4" />
             </button>
 
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
-            </form>
+            <LogoutButton />
           </div>
         </div>
 

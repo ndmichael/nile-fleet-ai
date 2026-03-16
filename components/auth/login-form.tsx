@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
+import { toast } from "sonner";
 import { signInWithPassword, type AuthState } from "@/app/actions/auth";
 
 const initialState: AuthState = {};
@@ -23,6 +24,12 @@ function SubmitButton() {
 
 export function LoginForm() {
   const [state, formAction] = useActionState(signInWithPassword, initialState);
+
+  useEffect(() => {
+    if (state?.error) {
+      toast.error(state.error);
+    }
+  }, [state]);
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/50">
