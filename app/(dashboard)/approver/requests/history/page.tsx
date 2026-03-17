@@ -1,28 +1,33 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { createClient } from "@/lib/supabase/server";
+import {
+  getRequestInfo,
+  type RequestRelation,
+} from "@/lib/data/approval-helpers";
 
-const historyRows = [
-  {
-    id: "REQ-011",
-    destination: "Airport Road",
-    decision: "Approved" as const,
-    date: "10 Jan 2026",
-  },
-  {
-    id: "REQ-010",
-    destination: "Central Abuja",
-    decision: "Rejected" as const,
-    date: "09 Jan 2026",
-  },
-  {
-    id: "REQ-009",
-    destination: "Gwarinpa",
-    decision: "Approved" as const,
-    date: "08 Jan 2026",
-  },
-];
+type ApprovalHistoryRow = {
+  id: string;
+  decision: "approved" | "rejected";
+  decided_at: string;
+  request: RequestRelation;
+};
 
-export default function ApprovalHistoryPage() {
+export default async function ApprovalHistoryPage() {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("approvals")
+    .select(`
+      id,
+      decision,
+      decided_at,
+      request:requests(request_code, destination)
+    `)
+    .order("decided_at", { ascending: false });
+
+  const approvals = (data ?? []) as ApprovalHistoryRow[];
+
   return (
     <DashboardShell
       role="approver"
@@ -41,25 +46,50 @@ export default function ApprovalHistoryPage() {
           <table className="w-full text-left">
             <thead className="bg-slate-50">
               <tr className="text-sm text-slate-500">
-                <th className="px-4 py-3 font-medium">Request ID</th>
+                <th className="px-4 py-3 font-medium">Request Code</th>
                 <th className="px-4 py-3 font-medium">Destination</th>
                 <th className="px-4 py-3 font-medium">Decision</th>
                 <th className="px-4 py-3 font-medium">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white text-sm">
-              {historyRows.map((row) => (
-                <tr key={row.id}>
-                  <td className="px-4 py-4 text-slate-700">{row.id}</td>
-                  <td className="px-4 py-4 text-slate-700">
-                    {row.destination}
+              {approvals.length > 0 ? (
+                approvals.map((approval) => {
+                  const requestInfo = getRequestInfo(approval.request);
+
+                  return (
+                    <tr key={approval.id}>
+                      <td className="px-4 py-4 text-slate-700">
+                        {requestInfo.request_code}
+                      </td>
+                      <td className="px-4 py-4 text-slate-700">
+                        {requestInfo.destination}
+                      </td>
+                      <td className="px-4 py-4">
+                        <StatusBadge
+                          status={
+                            approval.decision === "approved"
+                              ? "Approved"
+                              : "Rejected"
+                          }
+                        />
+                      </td>
+                      <td className="px-4 py-4 text-slate-500">
+                        {new Date(approval.decided_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-4 py-10 text-center text-sm text-slate-500"
+                  >
+                    No approval history found yet.
                   </td>
-                  <td className="px-4 py-4">
-                    <StatusBadge status={row.decision} />
-                  </td>
-                  <td className="px-4 py-4 text-slate-500">{row.date}</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
