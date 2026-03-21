@@ -1,35 +1,36 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { createClient } from "@/lib/supabase/server";
+import { getUnitName, type UnitRelation } from "@/lib/data/approval-helpers";
 
-const pendingRequests = [
-  {
-    id: "REQ-001",
-    destination: "Central Abuja",
-    purpose: "Official meeting",
-    date: "12 Jan 2026",
-    unit: "ICT",
-    status: "Pending" as const,
-  },
-  {
-    id: "REQ-002",
-    destination: "Airport Road",
-    purpose: "Protocol movement",
-    date: "13 Jan 2026",
-    unit: "Administration",
-    status: "Pending" as const,
-  },
-  {
-    id: "REQ-003",
-    destination: "Gwarinpa",
-    purpose: "Logistics support",
-    date: "14 Jan 2026",
-    unit: "Registry",
-    status: "Pending" as const,
-  },
-];
+type PendingRequestRow = {
+  id: string;
+  request_code: string;
+  destination: string;
+  purpose: string;
+  departure_date: string;
+  unit: UnitRelation;
+};
 
-export default function PendingRequestsPage() {
+export default async function PendingRequestsPage() {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("requests")
+    .select(`
+      id,
+      request_code,
+      destination,
+      purpose,
+      departure_date,
+      unit:units(name)
+    `)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+  const pendingRequests = (data ?? []) as PendingRequestRow[];
+
   return (
     <DashboardShell
       role="approver"
@@ -52,7 +53,7 @@ export default function PendingRequestsPage() {
           <table className="w-full text-left">
             <thead className="bg-slate-50">
               <tr className="text-sm text-slate-500">
-                <th className="px-4 py-3 font-medium">Request ID</th>
+                <th className="px-4 py-3 font-medium">Request Code</th>
                 <th className="px-4 py-3 font-medium">Destination</th>
                 <th className="px-4 py-3 font-medium">Purpose</th>
                 <th className="px-4 py-3 font-medium">Unit</th>
@@ -63,30 +64,47 @@ export default function PendingRequestsPage() {
             </thead>
 
             <tbody className="divide-y divide-slate-200 bg-white text-sm">
-              {pendingRequests.map((request) => (
-                <tr key={request.id}>
-                  <td className="px-4 py-4 text-slate-700">{request.id}</td>
-                  <td className="px-4 py-4 text-slate-700">
-                    {request.destination}
-                  </td>
-                  <td className="px-4 py-4 text-slate-600">
-                    {request.purpose}
-                  </td>
-                  <td className="px-4 py-4 text-slate-500">{request.unit}</td>
-                  <td className="px-4 py-4 text-slate-500">{request.date}</td>
-                  <td className="px-4 py-4">
-                    <StatusBadge status={request.status} />
-                  </td>
-                  <td className="px-4 py-4">
-                    <Link
-                      href={`/approver/requests/${request.id}`}
-                      className="inline-flex rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-                    >
-                      Review
-                    </Link>
+              {pendingRequests.length > 0 ? (
+                pendingRequests.map((request) => (
+                  <tr key={request.id}>
+                    <td className="px-4 py-4 text-slate-700">
+                      {request.request_code}
+                    </td>
+                    <td className="px-4 py-4 text-slate-700">
+                      {request.destination}
+                    </td>
+                    <td className="px-4 py-4 text-slate-600">
+                      {request.purpose}
+                    </td>
+                    <td className="px-4 py-4 text-slate-500">
+                      {getUnitName(request.unit)}
+                    </td>
+                    <td className="px-4 py-4 text-slate-500">
+                      {request.departure_date}
+                    </td>
+                    <td className="px-4 py-4">
+                      <StatusBadge status="Pending" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <Link
+                        href={`/approver/requests/${request.id}`}
+                        className="inline-flex rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                      >
+                        Review
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-10 text-center text-sm text-slate-500"
+                  >
+                    No pending requests available right now.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

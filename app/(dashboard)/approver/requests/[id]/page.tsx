@@ -1,19 +1,93 @@
+import { notFound } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { AIInsightsCard } from "@/components/ai/ai-insights-card";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { createClient } from "@/lib/supabase/server";
+import { ApprovalReviewForm } from "@/components/forms/approval-review-form";
 
 type ReviewRequestPageProps = {
   params: Promise<{ id: string }>;
 };
 
-/**
- * We keep this page simple for now with static data.
- * Later, this will read the actual request by ID from the database.
- */
+type RequestUnit = {
+  name: string;
+};
+
+type RequestRow = {
+  id: string;
+  request_code: string;
+  destination: string;
+  purpose: string;
+  passenger_count: number;
+  departure_date: string;
+  departure_time: string;
+  expected_return_date: string | null;
+  trip_type: string | null;
+  notes: string | null;
+  status: string;
+  unit: RequestUnit | RequestUnit[] | null;
+};
+
+type AILogRow = {
+  estimated_duration_minutes: number | null;
+  recommended_vehicle_category: "luxury" | "non_luxury" | null;
+  risk_flag: "low" | "medium" | "high" | null;
+  reason: string | null;
+};
+
+function formatDuration(minutes: number | null) {
+  if (!minutes || minutes <= 0) return "N/A";
+  const hours = Math.floor(minutes / 60);
+  const remaining = minutes % 60;
+  return hours > 0 ? `${hours}h ${remaining}m` : `${remaining}m`;
+}
+
+function formatRisk(risk: "low" | "medium" | "high" | null): "Low" | "Medium" | "High" {
+  if (risk === "medium") return "Medium";
+  if (risk === "high") return "High";
+  return "Low";
+}
+
+function formatVehicle(category: "luxury" | "non_luxury" | null) {
+  return category === "luxury" ? "Executive Sedan" : "Standard SUV / Mini Bus";
+}
+
 export default async function ReviewRequestPage({
   params,
 }: ReviewRequestPageProps) {
   const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: request, error: requestError } = await supabase
+    .from("requests")
+    .select(`
+      id,
+      request_code,
+      destination,
+      purpose,
+      passenger_count,
+      departure_date,
+      departure_time,
+      expected_return_date,
+      trip_type,
+      notes,
+      status,
+      unit:units(name)
+    `)
+    .eq("id", id)
+    .single<RequestRow>();
+
+  if (requestError || !request) {
+    notFound();
+  }
+
+  const { data: aiLog } = await supabase
+    .from("ai_logs")
+    .select("estimated_duration_minutes, recommended_vehicle_category, risk_flag, reason")
+    .eq("request_id", request.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<AILogRow>();
 
   return (
     <DashboardShell
@@ -40,30 +114,34 @@ export default async function ReviewRequestPage({
             <div className="mt-6 grid gap-5 md:grid-cols-2">
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Request ID
+                  Request Code
                 </p>
-                <p className="mt-2 text-sm text-slate-900">{id}</p>
+                <p className="mt-2 text-sm text-slate-900">{request.request_code}</p>
               </div>
 
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                   Destination
                 </p>
-                <p className="mt-2 text-sm text-slate-900">Central Abuja</p>
+                <p className="mt-2 text-sm text-slate-900">{request.destination}</p>
               </div>
 
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                   Purpose
                 </p>
-                <p className="mt-2 text-sm text-slate-900">Official meeting</p>
+                <p className="mt-2 text-sm text-slate-900">{request.purpose}</p>
               </div>
 
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                   Requesting Unit
                 </p>
-                <p className="mt-2 text-sm text-slate-900">ICT</p>
+                <p className="mt-2 text-sm text-slate-900">
+                  {Array.isArray(request.unit)
+                    ? request.unit[0]?.name ?? "Not assigned"
+                    : request.unit?.name ?? "Not assigned"}
+                </p>
               </div>
 
               <div>
@@ -71,7 +149,7 @@ export default async function ReviewRequestPage({
                   Departure
                 </p>
                 <p className="mt-2 text-sm text-slate-900">
-                  12 Jan 2026, 09:00 AM
+                  {request.departure_date}, {request.departure_time}
                 </p>
               </div>
 
@@ -80,7 +158,7 @@ export default async function ReviewRequestPage({
                   Expected Return
                 </p>
                 <p className="mt-2 text-sm text-slate-900">
-                  12 Jan 2026, 03:00 PM
+                  {request.expected_return_date ?? "Not provided"}
                 </p>
               </div>
 
@@ -88,14 +166,16 @@ export default async function ReviewRequestPage({
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                   Passenger Count
                 </p>
-                <p className="mt-2 text-sm text-slate-900">4</p>
+                <p className="mt-2 text-sm text-slate-900">{request.passenger_count}</p>
               </div>
 
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                   Trip Type
                 </p>
-                <p className="mt-2 text-sm text-slate-900">Official Duty</p>
+                <p className="mt-2 text-sm text-slate-900">
+                  {request.trip_type ?? "Not specified"}
+                </p>
               </div>
             </div>
 
@@ -104,8 +184,7 @@ export default async function ReviewRequestPage({
                 Additional Notes
               </p>
               <p className="mt-3 text-sm leading-6 text-slate-600">
-                Request raised for an external institutional meeting requiring
-                timely departure and return within the same day.
+                {request.notes?.trim() || "No additional notes provided."}
               </p>
             </div>
           </div>
@@ -118,48 +197,19 @@ export default async function ReviewRequestPage({
               Approve complete requests or reject with a clear reason.
             </p>
 
-            <form className="mt-6 space-y-5">
-              <div className="space-y-2">
-                <label
-                  htmlFor="comment"
-                  className="text-sm font-medium text-slate-700"
-                >
-                  Comment / Reason
-                </label>
-                <textarea
-                  id="comment"
-                  name="comment"
-                  rows={5}
-                  placeholder="Add an approval note or explain why the request is rejected..."
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-                >
-                  Approve Request
-                </button>
-
-                <button
-                  type="button"
-                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-red-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700"
-                >
-                  Reject Request
-                </button>
-              </div>
-            </form>
+            <ApprovalReviewForm requestId={request.id} />
           </div>
         </section>
 
         <div className="space-y-6">
           <AIInsightsCard
-            estimatedDuration="1h 35m"
-            recommendedVehicle="Standard SUV"
-            riskLevel="Low"
-            note="The request appears complete and operationally reasonable. The selected trip profile supports approval, subject to policy compliance."
+            estimatedDuration={formatDuration(aiLog?.estimated_duration_minutes ?? null)}
+            recommendedVehicle={formatVehicle(aiLog?.recommended_vehicle_category ?? null)}
+            riskLevel={formatRisk(aiLog?.risk_flag ?? null)}
+            note={
+              aiLog?.reason ??
+              "No AI insight is available for this request yet."
+            }
           />
 
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
