@@ -9,6 +9,8 @@ import { StatCard } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { createClient } from "@/lib/supabase/server";
 import { getUnitName, type UnitRelation } from "@/lib/data/approval-helpers";
+import { unstable_noStore as noStore } from "next/cache";
+
 
 type PendingQueueRow = {
   id: string;
@@ -29,28 +31,30 @@ async function getApproverDashboardData(): Promise<{
   stats: ApprovalStats;
   pendingQueue: PendingQueueRow[];
 }> {
+  noStore();
+
   const supabase = await createClient();
 
-  const { count: pendingCount } = await supabase
+  const { data: pendingRequests, error: pendingError } = await supabase
     .from("requests")
-    .select("*", { count: "exact", head: true })
+    .select("id")
     .eq("status", "pending");
 
-  const { count: approvedCount } = await supabase
+  const { data: approvedRows, error: approvedError } = await supabase
     .from("approvals")
-    .select("*", { count: "exact", head: true })
+    .select("id")
     .eq("decision", "approved");
 
-  const { count: rejectedCount } = await supabase
+  const { data: rejectedRows, error: rejectedError } = await supabase
     .from("approvals")
-    .select("*", { count: "exact", head: true })
+    .select("id")
     .eq("decision", "rejected");
 
-  const { count: reviewedCount } = await supabase
+  const { data: reviewedRows, error: reviewedError } = await supabase
     .from("approvals")
-    .select("*", { count: "exact", head: true });
+    .select("id");
 
-  const { data: queueData } = await supabase
+  const { data: queueData, error: queueError } = await supabase
     .from("requests")
     .select(`
       id,
@@ -63,12 +67,25 @@ async function getApproverDashboardData(): Promise<{
     .order("created_at", { ascending: false })
     .limit(5);
 
+  console.log({
+    pendingError,
+    approvedError,
+    rejectedError,
+    reviewedError,
+    queueError,
+    pendingRequests,
+    approvedRows,
+    rejectedRows,
+    reviewedRows,
+    queueData,
+  });
+
   return {
     stats: {
-      pendingCount: pendingCount ?? 0,
-      approvedCount: approvedCount ?? 0,
-      rejectedCount: rejectedCount ?? 0,
-      reviewedCount: reviewedCount ?? 0,
+      pendingCount: pendingRequests?.length ?? 0,
+      approvedCount: approvedRows?.length ?? 0,
+      rejectedCount: rejectedRows?.length ?? 0,
+      reviewedCount: reviewedRows?.length ?? 0,
     },
     pendingQueue: (queueData ?? []) as PendingQueueRow[],
   };
