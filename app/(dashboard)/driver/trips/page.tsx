@@ -1,32 +1,102 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/data/get-current-profile";
+type DriverTripRow = {
+  id: string;
+  actual_departure_at: string | null;
+  actual_return_at: string | null;
+  request:
+    | { destination: string }
+    | { destination: string }[]
+    | null;
+  allocation:
+    | {
+        driver_id: string;
+        vehicle:
+          | { make: string | null; model: string | null }
+          | { make: string | null; model: string | null }[]
+          | null;
+      }
+    | {
+        driver_id: string;
+        vehicle:
+          | { make: string | null; model: string | null }
+          | { make: string | null; model: string | null }[]
+          | null;
+      }[]
+    | null;
+};
 
-const assignedTrips = [
-  {
-    id: "TRIP-001",
-    route: "Central Abuja",
-    vehicle: "Toyota Prado",
-    departure: "09:00 AM",
-    status: "In Trip" as const,
-  },
-  {
-    id: "TRIP-002",
-    route: "Airport Road",
-    vehicle: "Honda Accord",
-    departure: "11:30 AM",
-    status: "Allocated" as const,
-  },
-  {
-    id: "TRIP-003",
-    route: "Gwarinpa",
-    vehicle: "Toyota Hiace",
-    departure: "08:15 AM",
-    status: "Completed" as const,
-  },
-];
+function getDestination(request: DriverTripRow["request"]) {
+  const resolved = Array.isArray(request) ? request[0] : request;
+  return resolved?.destination ?? "Unknown Route";
+}
 
-export default function DriverTripsPage() {
+function getVehicleLabel(allocation: DriverTripRow["allocation"]) {
+  const resolvedAllocation = Array.isArray(allocation)
+    ? allocation[0]
+    : allocation;
+
+  const vehicle = Array.isArray(resolvedAllocation?.vehicle)
+    ? resolvedAllocation?.vehicle[0]
+    : resolvedAllocation?.vehicle;
+
+  return `${vehicle?.make ?? ""} ${vehicle?.model ?? ""}`.trim() || "Unknown Vehicle";
+}
+
+function getTripStatus(
+  trip: Pick<DriverTripRow, "actual_departure_at" | "actual_return_at">
+): "Allocated" | "In Trip" | "Completed" {
+  if (trip.actual_return_at) return "Completed";
+  if (trip.actual_departure_at) return "In Trip";
+  return "Allocated";
+}
+
+export default async function DriverTripsPage() {
+  noStore();
+
+  const supabase = await createClient();
+  const profile = await getCurrentProfile();
+
+  let trips: DriverTripRow[] = [];
+
+  if (profile?.role === "driver") {
+    const { data: driverRow } = await supabase
+      .from("drivers")
+      .select("id")
+      .eq("profile_id", profile.id)
+      .single();
+
+    if (driverRow) {
+      const { data } = await supabase
+        .from("trips")
+        .select(`
+          id,
+          actual_departure_at,
+          actual_return_at,
+          request:requests(destination),
+          allocation:allocations(
+            driver_id,
+            vehicle:vehicles(make, model)
+          )
+        `)
+        .order("created_at", { ascending: false });
+
+      const allTrips = (data ?? []) as DriverTripRow[];
+
+      trips = allTrips.filter((trip) => {
+        const allocation = Array.isArray(trip.allocation)
+          ? trip.allocation[0]
+          : trip.allocation;
+
+        return allocation?.driver_id === driverRow.id;
+      });
+    }
+  }
+
   return (
     <DashboardShell
       role="driver"
@@ -55,25 +125,44 @@ export default function DriverTripsPage() {
             </thead>
 
             <tbody className="divide-y divide-slate-200 bg-white text-sm">
-              {assignedTrips.map((trip) => (
-                <tr key={trip.id}>
-                  <td className="px-4 py-4 text-slate-700">{trip.id}</td>
-                  <td className="px-4 py-4 text-slate-700">{trip.route}</td>
-                  <td className="px-4 py-4 text-slate-600">{trip.vehicle}</td>
-                  <td className="px-4 py-4 text-slate-600">{trip.departure}</td>
-                  <td className="px-4 py-4">
-                    <StatusBadge status={trip.status} />
-                  </td>
-                  <td className="px-4 py-4">
-                    <Link
-                      href={`/driver/trips/${trip.id}`}
-                      className="inline-flex rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-                    >
-                      Open Trip
-                    </Link>
+              {trips.length > 0 ? (
+                trips.map((trip) => (
+                  <tr key={trip.id}>
+                    <td className="px-4 py-4 text-slate-700">{trip.id}</td>
+                    <td className="px-4 py-4 text-slate-700">
+                      {getDestination(trip.request)}
+                    </td>
+                    <td className="px-4 py-4 text-slate-600">
+                      {getVehicleLabel(trip.allocation)}
+                    </td>
+                    <td className="px-4 py-4 text-slate-600">
+                      {trip.actual_departure_at
+                        ? new Date(trip.actual_departure_at).toLocaleString()
+                        : "Not started"}
+                    </td>
+                    <td className="px-4 py-4">
+                      <StatusBadge status={getTripStatus(trip)} />
+                    </td>
+                    <td className="px-4 py-4">
+                      <Link
+                        href={`/driver/trips/${trip.id}`}
+                        className="inline-flex rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                      >
+                        Open Trip
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-4 py-10 text-center text-sm text-slate-500"
+                  >
+                    No assigned trips found.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
