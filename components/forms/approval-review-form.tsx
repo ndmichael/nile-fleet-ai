@@ -6,6 +6,7 @@ import {
   reviewTransportRequest,
   type ApprovalFormState,
 } from "@/app/actions/approvals";
+import { useRouter } from "next/navigation";
 
 type ApprovalReviewFormProps = {
   requestId: string;
@@ -21,15 +22,22 @@ export function ApprovalReviewForm({
     initialState
   );
 
+  const router = useRouter();
+
   useEffect(() => {
     if (state?.success) {
-      toast.success(state.success);
+        toast.success(state.success);
+
+        setTimeout(() => {
+        router.push("/approver/requests/pending");
+        router.refresh();
+        }, 700);
     }
 
     if (state?.error) {
-      toast.error(state.error);
+        toast.error(state.error);
     }
-  }, [state]);
+    }, [state, router]);
 
   return (
     <form action={formAction} className="mt-6 space-y-5">
