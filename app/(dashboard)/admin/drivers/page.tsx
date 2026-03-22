@@ -46,8 +46,6 @@ export default async function DriversPage() {
     )
     .order("created_at", { ascending: false });
 
-  console.log({ driversError: error });
-
   const drivers = (data ?? []) as DriverRow[];
 
   return (

@@ -180,8 +180,6 @@ export default async function TripsPage() {
 
   const trips = (data ?? []) as TripMonitorRow[];
 
-  console.log({ adminTripsError: error });
-
   return (
     <DashboardShell
       role="admin"
