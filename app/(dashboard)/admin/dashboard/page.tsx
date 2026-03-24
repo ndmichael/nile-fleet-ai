@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   CarFront,
   ClipboardList,
@@ -21,36 +22,32 @@ async function getAdminDashboardData() {
 
   const supabase = await createClient();
 
-  const { data: approvedRequests, error: approvedRequestsError } =
-    await supabase.from("requests").select("id").eq("status", "approved");
-
-  const { data: availableVehicles, error: availableVehiclesError } =
-    await supabase.from("vehicles").select("id").eq("status", "available");
-
-  const { data: activeTrips, error: activeTripsError } = await supabase
+  const { data: approvedRequests } = await supabase
     .from("requests")
     .select("id")
-    .eq("status", "in_trip");
+    .eq("status", "approved");
 
-  const { data: lateTrips, error: lateTripsError } = await supabase
+  const { data: availableVehicles } = await supabase
+    .from("vehicles")
+    .select("id")
+    .eq("status", "available");
+
+  const { data: activeTrips } = await supabase
+    .from("requests")
+    .select("id")
+    .in("status", ["allocated", "in_trip"]);
+
+  const { data: lateTrips } = await supabase
     .from("trips")
     .select("id")
     .eq("late_return", true);
 
-  const { data: queueData, error: queueError } = await supabase
+  const { data: queueData } = await supabase
     .from("requests")
     .select("id, request_code, destination")
     .eq("status", "approved")
     .order("created_at", { ascending: false })
     .limit(5);
-
-  console.log({
-    approvedRequestsError,
-    availableVehiclesError,
-    activeTripsError,
-    lateTripsError,
-    queueError,
-  });
 
   return {
     pendingAllocation: approvedRequests?.length ?? 0,
@@ -72,47 +69,82 @@ export default async function AdminDashboardPage() {
     >
       <div className="space-y-6">
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            label="Pending Allocation"
-            value={String(data.pendingAllocation)}
-            helper="Approved requests awaiting vehicle assignment"
-            icon={<ClipboardList className="h-5 w-5" />}
-          />
-          <StatCard
-            label="Available Vehicles"
-            value={String(data.availableVehicles)}
-            helper="Vehicles currently available for assignment"
-            icon={<CarFront className="h-5 w-5" />}
-          />
-          <StatCard
-            label="Active Trips"
-            value={String(data.activeTrips)}
-            helper="Trips currently in progress"
-            icon={<Route className="h-5 w-5" />}
-          />
-          <StatCard
-            label="Late Return Flags"
-            value={String(data.lateFlags)}
-            helper="Trips flagged for delay or review"
-            icon={<TriangleAlert className="h-5 w-5" />}
-          />
+          <Link
+            href="/admin/allocation?status=approved"
+            className="block transition hover:-translate-y-0.5"
+          >
+            <StatCard
+              label="Pending Allocation"
+              value={String(data.pendingAllocation)}
+              helper="Open requests awaiting assignment"
+              icon={<ClipboardList className="h-5 w-5" />}
+            />
+          </Link>
+
+          <Link
+            href="/admin/vehicles?status=available"
+            className="block transition hover:-translate-y-0.5"
+          >
+            <StatCard
+              label="Available Vehicles"
+              value={String(data.availableVehicles)}
+              helper="Open available vehicles"
+              icon={<CarFront className="h-5 w-5" />}
+            />
+          </Link>
+
+          <Link
+            href="/admin/trips?status=active"
+            className="block transition hover:-translate-y-0.5"
+          >
+            <StatCard
+              label="Active Trips"
+              value={String(data.activeTrips)}
+              helper="View allocated and in-trip movements"
+              icon={<Route className="h-5 w-5" />}
+            />
+          </Link>
+
+          <Link
+            href="/admin/trips?late=yes"
+            className="block transition hover:-translate-y-0.5"
+          >
+            <StatCard
+              label="Late Return Flags"
+              value={String(data.lateFlags)}
+              helper="View trips flagged as late"
+              icon={<TriangleAlert className="h-5 w-5" />}
+            />
+          </Link>
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-              Allocation Queue Overview
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              A quick operational view of requests waiting for allocation.
-            </p>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight text-slate-950">
+                  Allocation Queue Overview
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  A quick operational view of requests waiting for allocation.
+                </p>
+              </div>
+
+              <Link
+                href="/admin/allocation?status=approved"
+                className="inline-flex rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+              >
+                View All
+              </Link>
+            </div>
 
             <div className="mt-6 space-y-4">
               {data.queue.length > 0 ? (
                 data.queue.map((item) => (
-                  <div
+                  <Link
                     key={item.id}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    href={`/admin/allocation?requestId=${item.id}`}
+                    className="block rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:bg-slate-100"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
@@ -126,7 +158,7 @@ export default async function AdminDashboardPage() {
 
                       <StatusBadge status="Approved" />
                     </div>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -143,8 +175,7 @@ export default async function AdminDashboardPage() {
               Admin Notes
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Use policy, availability, and AI guidance together during
-              allocation.
+              Use policy, availability, and AI guidance together during allocation.
             </p>
 
             <div className="mt-5 space-y-3">
