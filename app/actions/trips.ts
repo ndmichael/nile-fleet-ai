@@ -97,13 +97,22 @@ export async function startTripAction(
     return { error: tripUpdateError.message };
   }
 
-  const { error: requestUpdateError } = await supabase
+  const { data: updatedRequest, error: requestUpdateError } = await supabase
     .from("requests")
     .update({ status: "in_trip" })
-    .eq("id", tripRow.request_id);
+    .eq("id", tripRow.request_id)
+    .select("id, status")
+    .maybeSingle();
 
   if (requestUpdateError) {
     return { error: requestUpdateError.message };
+  }
+
+  if (!updatedRequest) {
+    return {
+      error:
+        "Trip started, but the linked request status could not be updated.",
+    };
   }
 
   const { error: vehicleUpdateError } = await supabase
@@ -220,13 +229,22 @@ export async function endTripAction(
     return { error: tripUpdateError.message };
   }
 
-  const { error: requestUpdateError } = await supabase
+  const { data: updatedRequest, error: requestUpdateError } = await supabase
     .from("requests")
     .update({ status: "completed" })
-    .eq("id", tripRow.request_id);
+    .eq("id", tripRow.request_id)
+    .select("id, status")
+    .maybeSingle();
 
   if (requestUpdateError) {
     return { error: requestUpdateError.message };
+  }
+
+  if (!updatedRequest) {
+    return {
+      error:
+        "Trip was marked completed, but the linked request status could not be updated.",
+    };
   }
 
   const { error: vehicleUpdateError } = await supabase
