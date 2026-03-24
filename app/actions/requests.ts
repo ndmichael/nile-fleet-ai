@@ -131,6 +131,7 @@ export async function createTransportRequest(
       departure_date: departureDate,
       departure_time: departureTime,
       expected_return_date: expectedReturnDate,
+      expected_return_time: expectedReturnTime,
       trip_type: tripCategory || null,
       notes: notes || null,
       status: "pending",
