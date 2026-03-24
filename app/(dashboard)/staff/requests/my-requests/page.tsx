@@ -14,7 +14,10 @@ type RequestStatusLabel =
 
 type SearchParams = Promise<{
   status?: string;
+  page?: string;
 }>;
+
+const PAGE_SIZE = 20;
 
 function mapStatus(status: string): RequestStatusLabel {
   switch (status) {
@@ -52,6 +55,16 @@ function getFilterLabel(status?: string) {
   }
 }
 
+function buildMyRequestsHref(status?: string, page = 1) {
+  const params = new URLSearchParams();
+
+  if (status) params.set("status", status);
+  if (page > 1) params.set("page", String(page));
+
+  const query = params.toString();
+  return query ? `/staff/requests/my-requests?${query}` : "/staff/requests/my-requests";
+}
+
 const FILTERS = [
   { label: "All", value: "" },
   { label: "Pending", value: "pending" },
@@ -70,7 +83,11 @@ export default async function MyRequestsPage({
   const profile = await getCurrentProfile();
   const supabase = await createClient();
   const resolvedSearchParams = await searchParams;
+
   const selectedStatus = resolvedSearchParams?.status?.trim() || "";
+  const currentPage = Math.max(Number(resolvedSearchParams?.page ?? "1") || 1, 1);
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
 
   let requests: Array<{
     id: string;
@@ -81,18 +98,23 @@ export default async function MyRequestsPage({
     status: RequestStatusLabel;
   }> = [];
 
+  let totalPages = 1;
+
   if (profile) {
     let query = supabase
       .from("requests")
-      .select("id, request_code, destination, purpose, created_at, status")
+      .select("id, request_code, destination, purpose, created_at, status", {
+        count: "exact",
+      })
       .eq("staff_profile_id", profile.id)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(from, to);
 
     if (selectedStatus) {
       query = query.eq("status", selectedStatus);
     }
 
-    const { data } = await query;
+    const { data, count } = await query;
 
     requests =
       data?.map((row) => ({
@@ -103,6 +125,8 @@ export default async function MyRequestsPage({
         created_at: new Date(row.created_at).toLocaleDateString(),
         status: mapStatus(row.status),
       })) ?? [];
+
+    totalPages = Math.max(Math.ceil((count ?? 0) / PAGE_SIZE), 1);
   }
 
   return (
@@ -141,11 +165,7 @@ export default async function MyRequestsPage({
             return (
               <Link
                 key={filter.label}
-                href={
-                  filter.value
-                    ? `/staff/requests/my-requests?status=${filter.value}`
-                    : "/staff/requests/my-requests"
-                }
+                href={buildMyRequestsHref(filter.value)}
                 className={`inline-flex rounded-full px-4 py-2 text-sm font-medium transition ${
                   isActive
                     ? "bg-blue-700 text-white"
@@ -211,6 +231,42 @@ export default async function MyRequestsPage({
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-6 flex items-center justify-between">
+          <p className="text-sm text-slate-500">
+            Page {currentPage} of {totalPages}
+          </p>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href={buildMyRequestsHref(
+                selectedStatus,
+                Math.max(currentPage - 1, 1)
+              )}
+              className={`inline-flex rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium transition ${
+                currentPage <= 1
+                  ? "pointer-events-none opacity-50"
+                  : "bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              Previous
+            </Link>
+
+            <Link
+              href={buildMyRequestsHref(
+                selectedStatus,
+                Math.min(currentPage + 1, totalPages)
+              )}
+              className={`inline-flex rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium transition ${
+                currentPage >= totalPages
+                  ? "pointer-events-none opacity-50"
+                  : "bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              Next
+            </Link>
+          </div>
         </div>
       </div>
     </DashboardShell>
