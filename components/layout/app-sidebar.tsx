@@ -11,6 +11,7 @@ import {
   Users,
   X,
   CarFront,
+  ChevronRight,
 } from "lucide-react";
 import clsx from "clsx";
 import { AppLogo } from "@/components/shared/app-logo";
@@ -27,6 +28,11 @@ type AppSidebarProps = {
   role: Role;
   mobileOpen?: boolean;
   onClose?: () => void;
+  currentUser: {
+    fullName: string;
+    email: string;
+    role: Role;
+  };
 };
 
 const navByRole: Record<Role, SidebarItem[]> = {
@@ -54,10 +60,26 @@ const navByRole: Record<Role, SidebarItem[]> = {
   ],
 };
 
+function formatRole(role: Role) {
+  switch (role) {
+    case "staff":
+      return "Staff";
+    case "approver":
+      return "Approver";
+    case "admin":
+      return "Admin";
+    case "driver":
+      return "Driver";
+    default:
+      return "User";
+  }
+}
+
 export function AppSidebar({
   role,
   mobileOpen = false,
   onClose,
+  currentUser,
 }: AppSidebarProps) {
   const pathname = usePathname();
   const items = navByRole[role];
@@ -68,14 +90,15 @@ export function AppSidebar({
         <button
           type="button"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-slate-900/40 lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-[1px] lg:hidden"
           aria-label="Close sidebar overlay"
         />
       ) : null}
 
       <aside
         className={clsx(
-          "fixed inset-y-0 left-0 z-50 flex h-screen w-72 shrink-0 flex-col border-r border-slate-200 bg-white transition-transform lg:static lg:z-auto lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col border-r border-slate-200 bg-white/95 shadow-xl backdrop-blur lg:shadow-none",
+          "transition-transform duration-300 lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -84,22 +107,37 @@ export function AppSidebar({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100 lg:hidden"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100 lg:hidden"
             aria-label="Close sidebar"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4 shrink-0" />
           </button>
         </div>
 
-        <div className="flex-1 px-4 py-6">
+        <div className="border-b border-slate-200 px-4 py-4">
+          <div className="rounded-3xl bg-slate-100 p-4">
+            <p className="truncate text-sm font-semibold text-slate-900">
+              {currentUser.fullName}
+            </p>
+            <p className="mt-1 truncate text-xs text-slate-500">
+              {currentUser.email || "No email available"}
+            </p>
+            <div className="mt-3 inline-flex max-w-full rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
+              <span className="truncate">{formatRole(currentUser.role)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-6">
           <p className="px-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
             Navigation
           </p>
 
-          <nav className="mt-4 space-y-1">
+          <nav className="mt-4 space-y-1.5">
             {items.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive =
+                pathname === item.href || pathname.startsWith(`${item.href}/`);
 
               return (
                 <Link
@@ -107,14 +145,25 @@ export function AppSidebar({
                   href={item.href}
                   onClick={onClose}
                   className={clsx(
-                    "flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition",
+                    "group flex items-center justify-between gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition",
                     isActive
-                      ? "bg-blue-50 text-blue-700"
+                      ? "bg-blue-600 text-white shadow-sm"
                       : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span>{item.label}</span>
+                  <span className="flex min-w-0 items-center gap-3">
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </span>
+
+                  <ChevronRight
+                    className={clsx(
+                      "h-4 w-4 shrink-0 transition",
+                      isActive
+                        ? "text-white/80"
+                        : "text-slate-400 group-hover:text-slate-600"
+                    )}
+                  />
                 </Link>
               );
             })}
