@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   CheckCircle2,
   ClipboardList,
@@ -12,8 +13,8 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { getStaffDashboardAISummary } from "@/lib/data/get-staff-dashboard-ai-summary";
 
 export default async function StaffDashboardPage() {
-    const dashboardData = await getStaffDashboardData();
-    const aiSummary = await getStaffDashboardAISummary();
+  const dashboardData = await getStaffDashboardData();
+  const aiSummary = await getStaffDashboardAISummary();
 
   return (
     <>
@@ -26,30 +27,53 @@ export default async function StaffDashboardPage() {
       >
         <div className="space-y-6">
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              label="Total Requests"
-              value={String(dashboardData.totalRequests)}
-              helper="All requests submitted by this staff user"
-              icon={<ClipboardList className="h-5 w-5" />}
-            />
-            <StatCard
-              label="Pending Approval"
-              value={String(dashboardData.pendingRequests)}
-              helper="Requests awaiting review"
-              icon={<Clock3 className="h-5 w-5" />}
-            />
-            <StatCard
-              label="Approved Requests"
-              value={String(dashboardData.approvedRequests)}
-              helper="Requests successfully approved"
-              icon={<CheckCircle2 className="h-5 w-5" />}
-            />
-            <StatCard
-              label="AI Suggestions Used"
-              value={String(dashboardData.aiSuggestionsUsed)}
-              helper="Requests supported by recommendation logic"
-              icon={<Sparkles className="h-5 w-5" />}
-            />
+            <Link
+              href="/staff/requests/my-requests"
+              className="block transition hover:-translate-y-0.5"
+            >
+              <StatCard
+                label="Total Requests"
+                value={String(dashboardData.totalRequests)}
+                helper="Open full request history"
+                icon={<ClipboardList className="h-5 w-5" />}
+              />
+            </Link>
+
+            <Link
+              href="/staff/requests/my-requests?status=pending"
+              className="block transition hover:-translate-y-0.5"
+            >
+              <StatCard
+                label="Pending Approval"
+                value={String(dashboardData.pendingRequests)}
+                helper="View pending requests"
+                icon={<Clock3 className="h-5 w-5" />}
+              />
+            </Link>
+
+            <Link
+              href="/staff/requests/my-requests?status=approved"
+              className="block transition hover:-translate-y-0.5"
+            >
+              <StatCard
+                label="Approved Requests"
+                value={String(dashboardData.approvedRequests)}
+                helper="View approved requests"
+                icon={<CheckCircle2 className="h-5 w-5" />}
+              />
+            </Link>
+
+            <Link
+              href="/staff/requests/my-requests"
+              className="block transition hover:-translate-y-0.5"
+            >
+              <StatCard
+                label="AI Suggestions Used"
+                value={String(dashboardData.aiSuggestionsUsed)}
+                helper="Open request history"
+                icon={<Sparkles className="h-5 w-5" />}
+              />
+            </Link>
           </section>
 
           <section className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
@@ -63,6 +87,13 @@ export default async function StaffDashboardPage() {
                     A quick view of your latest vehicle request activity.
                   </p>
                 </div>
+
+                <Link
+                  href="/staff/requests/my-requests"
+                  className="inline-flex rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                >
+                  View All
+                </Link>
               </div>
 
               <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200">
@@ -79,7 +110,12 @@ export default async function StaffDashboardPage() {
                       dashboardData.recentRequests.map((request) => (
                         <tr key={request.id}>
                           <td className="px-4 py-4 text-slate-700">
-                            {request.destination}
+                            <Link
+                              href={`/staff/requests/${request.id}`}
+                              className="transition hover:text-blue-700"
+                            >
+                              {request.destination}
+                            </Link>
                           </td>
                           <td className="px-4 py-4 text-slate-500">
                             {request.createdAt}
@@ -107,47 +143,47 @@ export default async function StaffDashboardPage() {
             <div className="space-y-6">
               <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-                    AI Insights
+                  AI Insights
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                    Latest recommendation generated from your most recent request activity.
+                  Latest recommendation generated from your most recent request activity.
                 </p>
 
                 <div className="mt-6 space-y-4">
-                    <div className="rounded-2xl bg-slate-50 p-4">
+                  <div className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Estimated Duration
+                      Estimated Duration
                     </p>
                     <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-                        {aiSummary.estimatedDuration}
+                      {aiSummary.estimatedDuration}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
-                        AI-generated travel time estimate for your latest request
+                      AI-generated travel time estimate for your latest request
                     </p>
-                    </div>
+                  </div>
 
-                    <div className="rounded-2xl bg-slate-50 p-4">
+                  <div className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Recommended Vehicle
+                      Recommended Vehicle
                     </p>
                     <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-                        {aiSummary.recommendedVehicle}
+                      {aiSummary.recommendedVehicle}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
-                        Suggested category based on route, purpose, and passenger demand
+                      Suggested category based on route, purpose, and passenger demand
                     </p>
-                    </div>
+                  </div>
 
-                    <div className="rounded-2xl bg-slate-50 p-4">
+                  <div className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        AI Reason
+                      AI Reason
                     </p>
                     <p className="mt-2 text-sm leading-6 text-slate-600">
-                        {aiSummary.note}
+                      {aiSummary.note}
                     </p>
-                    </div>
+                  </div>
                 </div>
-                </div>
+              </div>
 
               <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-semibold tracking-tight text-slate-950">

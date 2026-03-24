@@ -14,6 +14,13 @@ function makeRequestCode() {
   return `REQ-${Date.now()}`;
 }
 
+function getHour(value: string): number | undefined {
+  if (!value) return undefined;
+
+  const hour = Number(value.split(":")[0]);
+  return Number.isNaN(hour) ? undefined : hour;
+}
+
 export async function createTransportRequest(
   prevState: RequestFormState,
   formData: FormData
@@ -49,24 +56,65 @@ export async function createTransportRequest(
     };
   }
 
-  const destination = String(formData.get("destination") ?? "").trim();
-  const purpose = String(formData.get("purpose") ?? "").trim();
+  const destinationArea = String(formData.get("destinationArea") ?? "").trim();
+  const destinationLandmark = String(formData.get("destinationLandmark") ?? "").trim();
+  const tripCategory = String(formData.get("tripCategory") ?? "").trim();
+  const purposeDetails = String(formData.get("purposeDetails") ?? "").trim();
   const departureDate = String(formData.get("departureDate") ?? "").trim();
   const departureTime = String(formData.get("departureTime") ?? "").trim();
   const expectedReturnDate = String(formData.get("returnDate") ?? "").trim();
+  const expectedReturnTime = String(formData.get("returnTime") ?? "").trim();
   const passengerCount = Number(formData.get("passengerCount") ?? 0);
-  const tripType = String(formData.get("tripType") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const unitId = String(formData.get("unit") ?? "").trim();
 
-  if (!destination || !purpose || !departureDate || !departureTime || passengerCount < 1) {
+  const destination = [destinationArea, destinationLandmark]
+    .filter(Boolean)
+    .join(", ");
+
+  const purpose = [tripCategory, purposeDetails]
+    .filter(Boolean)
+    .join(" - ");
+
+  if (
+    !destinationArea ||
+    !destinationLandmark ||
+    !tripCategory ||
+    !purposeDetails ||
+    !departureDate ||
+    !departureTime ||
+    !expectedReturnDate ||
+    !expectedReturnTime ||
+    passengerCount < 1
+  ) {
     return { error: "Please complete all required request fields." };
+  }
+
+  const departureDateTime = new Date(`${departureDate}T${departureTime}:00`);
+  const returnDateTime = new Date(`${expectedReturnDate}T${expectedReturnTime}:00`);
+
+  if (
+    Number.isNaN(departureDateTime.getTime()) ||
+    Number.isNaN(returnDateTime.getTime())
+  ) {
+    return { error: "Invalid departure or return date/time." };
+  }
+
+  if (returnDateTime <= departureDateTime) {
+    return { error: "Expected return date/time must be later than departure date/time." };
   }
 
   const insights = getRequestInsights({
     destination,
+    destinationArea,
+    destinationLandmark,
     passengerCount,
-    tripType,
+    tripCategory,
+    purposeDetails,
+    departureDate,
+    departureHour: getHour(departureTime),
+    expectedReturnDate,
+    expectedReturnHour: getHour(expectedReturnTime),
   });
 
   const requestCode = makeRequestCode();
@@ -82,8 +130,9 @@ export async function createTransportRequest(
       passenger_count: passengerCount,
       departure_date: departureDate,
       departure_time: departureTime,
-      expected_return_date: expectedReturnDate || null,
-      trip_type: tripType || null,
+      expected_return_date: expectedReturnDate,
+      expected_return_time: expectedReturnTime,
+      trip_type: tripCategory || null,
       notes: notes || null,
       status: "pending",
     })

@@ -50,12 +50,6 @@ export default async function ReportsPage() {
     .from("ai_logs")
     .select("id");
 
-  console.log({
-    reportsTripsError: tripsError,
-    reportsVehiclesError: vehiclesError,
-    reportsAiLogsError: aiLogsError,
-  });
-
   const trips = (tripsData ?? []) as Array<
     TripDurationRow & { id: string; late_return: boolean }
   >;

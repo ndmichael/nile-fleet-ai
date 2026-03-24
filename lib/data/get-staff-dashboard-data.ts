@@ -28,8 +28,10 @@ function mapStatus(
       return "Allocated";
     case "in_trip":
       return "In Trip";
-    default:
+    case "completed":
       return "Completed";
+    default:
+      return "Pending";
   }
 }
 
@@ -63,15 +65,22 @@ export async function getStaffDashboardData(): Promise<StaffDashboardData> {
     };
   }
 
+  const requestIds = requests.map((r) => r.id);
+
+  let aiSuggestionsUsed = 0;
+
+  if (requestIds.length > 0) {
+    const { count } = await supabase
+      .from("ai_logs")
+      .select("id", { count: "exact", head: true })
+      .in("request_id", requestIds);
+
+    aiSuggestionsUsed = count ?? 0;
+  }
+
   const totalRequests = requests.length;
   const pendingRequests = requests.filter((r) => r.status === "pending").length;
-  const approvedRequests = requests.filter((r) =>
-    ["approved", "allocated", "in_trip", "completed"].includes(r.status)
-  ).length;
-
-  // For now this is a simple proxy metric.
-  // Later, this should come from ai_logs linked to the user's requests.
-  const aiSuggestionsUsed = requests.length;
+  const approvedRequests = requests.filter((r) => r.status === "approved").length;
 
   const recentRequests = requests.slice(0, 5).map((request) => ({
     id: request.id,

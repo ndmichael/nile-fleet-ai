@@ -1,9 +1,13 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { StatusBadge } from "@/components/shared/status-badge";
 import { createClient } from "@/lib/supabase/server";
 
-type VehicleStatus = "Approved" | "Allocated" | "In Trip" | "Completed";
+type VehicleStatus =
+  | "Available"
+  | "Allocated"
+  | "In Trip"
+  | "Maintenance"
+  | "Inactive";
 
 type VehicleRow = {
   id: string;
@@ -21,11 +25,49 @@ function mapVehicleStatus(status: string): VehicleStatus {
       return "Allocated";
     case "in_trip":
       return "In Trip";
-    case "available":
-      return "Completed";
+    case "maintenance":
+      return "Maintenance";
+    case "inactive":
+      return "Inactive";
     default:
-      return "Approved";
+      return "Available";
   }
+}
+
+function formatVehicleType(type: string): string {
+  switch (type) {
+    case "assigned":
+      return "Assigned Vehicle";
+    default:
+      return "Pool Vehicle";
+  }
+}
+
+function formatVehicleCategory(category: string): string {
+  switch (category) {
+    case "non_luxury":
+      return "Non-Luxury";
+    default:
+      return "Luxury";
+  }
+}
+
+function VehicleStatusBadge({ status }: { status: VehicleStatus }) {
+  const styles: Record<VehicleStatus, string> = {
+    Available: "bg-emerald-50 text-emerald-700",
+    Allocated: "bg-blue-50 text-blue-700",
+    "In Trip": "bg-violet-50 text-violet-700",
+    Maintenance: "bg-orange-50 text-orange-700",
+    Inactive: "bg-slate-200 text-slate-700",
+  };
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${styles[status]}`}
+    >
+      {status}
+    </span>
+  );
 }
 
 export default async function VehiclesPage() {
@@ -81,12 +123,16 @@ export default async function VehiclesPage() {
                     <td className="px-4 py-4 text-slate-700">
                       {`${vehicle.make ?? ""} ${vehicle.model ?? ""}`.trim()}
                     </td>
-                    <td className="px-4 py-4 text-slate-600">{vehicle.type}</td>
                     <td className="px-4 py-4 text-slate-600">
-                      {vehicle.category}
+                      {formatVehicleType(vehicle.type)}
+                    </td>
+                    <td className="px-4 py-4 text-slate-600">
+                      {formatVehicleCategory(vehicle.category)}
                     </td>
                     <td className="px-4 py-4">
-                      <StatusBadge status={mapVehicleStatus(vehicle.status)} />
+                      <VehicleStatusBadge
+                        status={mapVehicleStatus(vehicle.status)}
+                      />
                     </td>
                   </tr>
                 ))
