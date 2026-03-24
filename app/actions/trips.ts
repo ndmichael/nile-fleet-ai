@@ -11,12 +11,17 @@ export type TripActionState = {
 
 function isLateReturn(
   actualReturnAt: string,
-  expectedReturnDate: string | null
+  expectedReturnDate: string | null,
+  expectedReturnTime: string | null
 ): boolean {
-  if (!expectedReturnDate) return false;
+  if (!expectedReturnDate || !expectedReturnTime) return false;
 
-  const expected = new Date(expectedReturnDate);
+  const expected = new Date(`${expectedReturnDate}T${expectedReturnTime}`);
   const actual = new Date(actualReturnAt);
+
+  if (Number.isNaN(expected.getTime()) || Number.isNaN(actual.getTime())) {
+    return false;
+  }
 
   return actual.getTime() > expected.getTime();
 }
@@ -180,7 +185,8 @@ export async function endTripAction(
         vehicle_id
       ),
       request:requests(
-        expected_return_date
+        expected_return_date,
+        expected_return_time
       )
     `)
     .eq("id", tripId)
@@ -212,9 +218,10 @@ export async function endTripAction(
 
   const returnedAt = new Date().toISOString();
   const lateReturn = isLateReturn(
-    returnedAt,
-    request?.expected_return_date ?? null
-  );
+  returnedAt,
+  request?.expected_return_date ?? null,
+  request?.expected_return_time ?? null
+);
 
   const { error: tripUpdateError } = await supabase
     .from("trips")
