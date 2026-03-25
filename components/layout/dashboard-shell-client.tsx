@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import type { TopbarNotification } from "@/lib/data/get-my-notifications";
 
 type Role = "staff" | "approver" | "admin" | "driver";
 
@@ -16,6 +17,10 @@ type DashboardShellClientProps = {
     email: string;
     role: Role;
   };
+  notifications: {
+    unreadCount: number;
+    notifications: TopbarNotification[];
+  };
 };
 
 export function DashboardShellClient({
@@ -24,6 +29,7 @@ export function DashboardShellClient({
   subtitle,
   children,
   currentUser,
+  notifications,
 }: DashboardShellClientProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -42,6 +48,7 @@ export function DashboardShellClient({
           subtitle={subtitle}
           onOpenSidebar={() => setMobileOpen(true)}
           currentUser={currentUser}
+          notifications={notifications}
         />
 
         <main className="px-4 py-6 sm:px-6 lg:px-8">{children}</main>
