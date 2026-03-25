@@ -39,7 +39,6 @@ export function StaffRequestWorkspace({
     return getRequestInsights({
       destination,
       passengerCount,
-      tripType,
     });
   }, [destination, passengerCount, tripType]);
 

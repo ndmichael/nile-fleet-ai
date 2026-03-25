@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { getCurrentProfile } from "@/lib/data/get-current-profile";
+import { getMyNotifications } from "@/lib/data/get-my-notifications";
 import { DashboardShellClient } from "@/components/layout/dashboard-shell-client";
 
 type Role = "staff" | "approver" | "admin" | "driver";
@@ -18,6 +19,7 @@ export async function DashboardShell({
   children,
 }: DashboardShellProps) {
   const profile = await getCurrentProfile();
+  const notificationsData = await getMyNotifications();
 
   return (
     <DashboardShellClient
@@ -29,6 +31,7 @@ export async function DashboardShell({
         email: profile?.email ?? "",
         role: profile?.role ?? role,
       }}
+      notifications={notificationsData}
     >
       {children}
     </DashboardShellClient>

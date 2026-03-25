@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/data/get-current-profile";
+import {
+  getProfileIdsByRole,
+  sendBulkNotifications,
+} from "@/lib/notifications/send-notification";
 
 export type TripActionState = {
   error?: string;
@@ -129,6 +133,33 @@ export async function startTripAction(
     return { error: vehicleUpdateError.message };
   }
 
+  const { data: requestDetails } = await supabase
+    .from("requests")
+    .select("id, request_code, destination, staff_profile_id")
+    .eq("id", tripRow.request_id)
+    .single();
+
+  const admins = await getProfileIdsByRole(["admin"]);
+
+  if (requestDetails) {
+    await sendBulkNotifications([
+      {
+        profileId: requestDetails.staff_profile_id,
+        title: "Trip Started",
+        message: `Your allocated trip for ${requestDetails.destination} has started.`,
+        type: "trip_started",
+        link: `/staff/requests/${requestDetails.id}`,
+      },
+      ...admins.map((item) => ({
+        profileId: item.id,
+        title: "Trip In Progress",
+        message: `Trip ${requestDetails.request_code} is now in progress.`,
+        type: "trip_in_progress",
+        link: "/admin/trips?status=in_trip",
+      })),
+    ]);
+  }
+
   revalidatePath("/driver/dashboard");
   revalidatePath("/driver/trips");
   revalidatePath(`/driver/trips/${tripId}`);
@@ -218,10 +249,10 @@ export async function endTripAction(
 
   const returnedAt = new Date().toISOString();
   const lateReturn = isLateReturn(
-  returnedAt,
-  request?.expected_return_date ?? null,
-  request?.expected_return_time ?? null
-);
+    returnedAt,
+    request?.expected_return_date ?? null,
+    request?.expected_return_time ?? null
+  );
 
   const { error: tripUpdateError } = await supabase
     .from("trips")
@@ -270,6 +301,37 @@ export async function endTripAction(
 
   if (driverUpdateError) {
     return { error: driverUpdateError.message };
+  }
+
+  const { data: requestDetails } = await supabase
+    .from("requests")
+    .select("id, request_code, destination, staff_profile_id")
+    .eq("id", tripRow.request_id)
+    .single();
+
+  const admins = await getProfileIdsByRole(["admin"]);
+
+  if (requestDetails) {
+    await sendBulkNotifications([
+      {
+        profileId: requestDetails.staff_profile_id,
+        title: lateReturn ? "Trip Completed With Late Return" : "Trip Completed",
+        message: lateReturn
+          ? `Your trip for ${requestDetails.destination} has been completed and flagged as late.`
+          : `Your trip for ${requestDetails.destination} has been completed.`,
+        type: lateReturn ? "trip_completed_late" : "trip_completed",
+        link: `/staff/requests/${requestDetails.id}`,
+      },
+      ...admins.map((item) => ({
+        profileId: item.id,
+        title: lateReturn ? "Late Return Flagged" : "Trip Completed",
+        message: lateReturn
+          ? `Trip ${requestDetails.request_code} completed with a late return flag.`
+          : `Trip ${requestDetails.request_code} has been completed.`,
+        type: lateReturn ? "late_return_flagged" : "trip_completed",
+        link: lateReturn ? "/admin/trips?late=yes" : "/admin/trips?status=completed",
+      })),
+    ]);
   }
 
   revalidatePath("/driver/dashboard");

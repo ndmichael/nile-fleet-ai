@@ -56,7 +56,7 @@ export default async function StaffDashboardPage() {
               className="block transition hover:-translate-y-0.5"
             >
               <StatCard
-                label="Approved Requests"
+                label="Approved Request"
                 value={String(dashboardData.approvedRequests)}
                 helper="View approved requests"
                 icon={<CheckCircle2 className="h-5 w-5" />}
@@ -68,7 +68,7 @@ export default async function StaffDashboardPage() {
               className="block transition hover:-translate-y-0.5"
             >
               <StatCard
-                label="AI Suggestions Used"
+                label="AI Suggestions"
                 value={String(dashboardData.aiSuggestionsUsed)}
                 helper="Open request history"
                 icon={<Sparkles className="h-5 w-5" />}
@@ -121,7 +121,12 @@ export default async function StaffDashboardPage() {
                             {request.createdAt}
                           </td>
                           <td className="px-4 py-4">
-                            <StatusBadge status={request.status} />
+                            <Link
+                              href={`/staff/requests/${request.id}`}
+                              className="inline-flex"
+                            >
+                              <StatusBadge status={request.status} />
+                            </Link>
                           </td>
                         </tr>
                       ))
@@ -141,7 +146,10 @@ export default async function StaffDashboardPage() {
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <Link
+                href="/staff/requests/my-requests"
+                className="block rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5"
+              >
                 <h2 className="text-lg font-semibold tracking-tight text-slate-950">
                   AI Insights
                 </h2>
@@ -150,7 +158,7 @@ export default async function StaffDashboardPage() {
                 </p>
 
                 <div className="mt-6 space-y-4">
-                  <div className="rounded-2xl bg-slate-50 p-4">
+                  <div className="rounded-2xl bg-slate-50 p-4 transition hover:bg-slate-100">
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                       Estimated Duration
                     </p>
@@ -162,7 +170,7 @@ export default async function StaffDashboardPage() {
                     </p>
                   </div>
 
-                  <div className="rounded-2xl bg-slate-50 p-4">
+                  <div className="rounded-2xl bg-slate-50 p-4 transition hover:bg-slate-100">
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                       Recommended Vehicle
                     </p>
@@ -174,7 +182,7 @@ export default async function StaffDashboardPage() {
                     </p>
                   </div>
 
-                  <div className="rounded-2xl bg-slate-50 p-4">
+                  <div className="rounded-2xl bg-slate-50 p-4 transition hover:bg-slate-100">
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                       AI Reason
                     </p>
@@ -183,9 +191,12 @@ export default async function StaffDashboardPage() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </Link>
 
-              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <Link
+                href="/staff/requests/new"
+                className="block rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5"
+              >
                 <h2 className="text-lg font-semibold tracking-tight text-slate-950">
                   Quick Note
                 </h2>
@@ -194,7 +205,7 @@ export default async function StaffDashboardPage() {
                   during allocation. Final allocation is still subject to approval,
                   availability, and transport policy rules.
                 </p>
-              </div>
+              </Link>
             </div>
           </section>
         </div>
