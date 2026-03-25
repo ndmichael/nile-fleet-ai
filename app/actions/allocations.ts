@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/data/get-current-profile";
+import { sendBulkNotifications } from "@/lib/notifications/send-notification";
 
 export type AllocationFormState = {
   error?: string;
@@ -36,7 +37,7 @@ export async function allocateTransportRequest(
 
   const { data: request, error: requestError } = await supabase
     .from("requests")
-    .select("id, status")
+    .select("id, request_code, destination, staff_profile_id, status")
     .eq("id", requestId)
     .single();
 
@@ -64,7 +65,7 @@ export async function allocateTransportRequest(
 
   const { data: driver, error: driverError } = await supabase
     .from("drivers")
-    .select("id, is_available")
+    .select("id, is_available, profile_id")
     .eq("id", driverId)
     .single();
 
@@ -127,6 +128,27 @@ export async function allocateTransportRequest(
     return { error: tripError.message };
   }
 
+  await sendBulkNotifications([
+    {
+      profileId: request.staff_profile_id,
+      title: "Vehicle Allocated",
+      message: `Your request ${request.request_code} has been allocated for ${request.destination}.`,
+      type: "request_allocated",
+      link: `/staff/requests/${request.id}`,
+    },
+    ...(driver.profile_id
+      ? [
+          {
+            profileId: driver.profile_id,
+            title: "New Trip Assigned",
+            message: `You have been assigned a trip for ${request.destination}.`,
+            type: "trip_assigned",
+            link: "/driver/trips",
+          },
+        ]
+      : []),
+  ]);
+
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/allocation");
   revalidatePath("/admin/vehicles");
@@ -135,6 +157,8 @@ export async function allocateTransportRequest(
   revalidatePath("/staff/dashboard");
   revalidatePath("/staff/requests/my-requests");
   revalidatePath(`/staff/requests/${requestId}`);
+  revalidatePath("/driver/dashboard");
+  revalidatePath("/driver/trips");
 
   return { success: "Transport request allocated successfully." };
 }

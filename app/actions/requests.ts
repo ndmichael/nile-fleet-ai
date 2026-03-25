@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/data/get-current-profile";
 import { getRequestInsights } from "@/lib/ai/request-insights";
+import {
+  getProfileIdsByRole,
+  sendBulkNotifications,
+} from "@/lib/notifications/send-notification";
 
 export type RequestFormState = {
   error?: string;
@@ -155,9 +159,23 @@ export async function createTransportRequest(
     return { error: aiLogError.message };
   }
 
+  const approvers = await getProfileIdsByRole(["approver"]);
+
+  await sendBulkNotifications(
+    approvers.map((item) => ({
+      profileId: item.id,
+      title: "New Transport Request",
+      message: `${profile.full_name} submitted a new transport request: ${requestCode}.`,
+      type: "request_submitted",
+      link: "/approver/requests/pending",
+    }))
+  );
+
   revalidatePath("/staff/dashboard");
   revalidatePath("/staff/requests/my-requests");
   revalidatePath("/staff/requests/new");
+  revalidatePath("/approver/dashboard");
+  revalidatePath("/approver/requests/pending");
 
   return { success: "Transport request submitted successfully." };
 }
