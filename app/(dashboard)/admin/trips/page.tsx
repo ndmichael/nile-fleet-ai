@@ -273,84 +273,88 @@ export default async function TripsPage({
           })}
         </div>
 
-        <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50">
-              <tr className="text-sm text-slate-500">
-                <th className="px-4 py-3 font-medium">Trip ID</th>
-                <th className="px-4 py-3 font-medium">Request Code</th>
-                <th className="px-4 py-3 font-medium">Route</th>
-                <th className="px-4 py-3 font-medium">Vehicle</th>
-                <th className="px-4 py-3 font-medium">Driver</th>
-                <th className="px-4 py-3 font-medium">Departure</th>
-                <th className="px-4 py-3 font-medium">Return</th>
-                <th className="px-4 py-3 font-medium">Late</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-slate-200 bg-white text-sm">
-              {trips.length > 0 ? (
-                trips.map((trip) => {
-                  const requestInfo = getRequestInfo(trip.request);
-                  const allocationInfo = getAllocationInfo(trip.allocation);
-
-                  return (
-                    <tr key={trip.id}>
-                      <td className="px-4 py-4 text-slate-700">{trip.id}</td>
-                      <td className="px-4 py-4 text-slate-700">
-                        {requestInfo.requestCode}
-                      </td>
-                      <td className="px-4 py-4 text-slate-700">
-                        {requestInfo.destination}
-                      </td>
-                      <td className="px-4 py-4 text-slate-600">
-                        {allocationInfo.vehicleLabel}
-                      </td>
-                      <td className="px-4 py-4 text-slate-600">
-                        {allocationInfo.driverName}
-                      </td>
-                      <td className="px-4 py-4 text-slate-600">
-                        {trip.actual_departure_at
-                          ? new Date(trip.actual_departure_at).toLocaleString()
-                          : "Not started"}
-                      </td>
-                      <td className="px-4 py-4 text-slate-600">
-                        {trip.actual_return_at
-                          ? new Date(trip.actual_return_at).toLocaleString()
-                          : "Not returned"}
-                      </td>
-                      <td className="px-4 py-4">
-                        <span
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-                            trip.late_return
-                              ? "bg-red-50 text-red-700"
-                              : "bg-emerald-50 text-emerald-700"
-                          }`}
-                        >
-                          {trip.late_return ? "Yes" : "No"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <StatusBadge
-                          status={mapRequestStatus(requestInfo.status)}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td
-                    colSpan={9}
-                    className="px-4 py-10 text-center text-sm text-slate-500"
-                  >
-                    No trip activity found for this filter.
-                  </td>
+        <div className="mt-6 rounded-2xl border border-slate-200">
+          <div className="w-full overflow-x-auto">
+            <table className="min-w-[1200px] text-left">
+              <thead className="bg-slate-50">
+                <tr className="text-sm text-slate-500">
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Trip ID</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Request Code</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Route</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Vehicle</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Driver</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Departure</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Return</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Late</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Status</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody className="divide-y divide-slate-200 bg-white text-sm">
+                {trips.length > 0 ? (
+                  trips.map((trip) => {
+                    const requestInfo = getRequestInfo(trip.request);
+                    const allocationInfo = getAllocationInfo(trip.allocation);
+
+                    return (
+                      <tr key={trip.id}>
+                        <td className="px-4 py-4 text-slate-700 whitespace-nowrap">
+                          {trip.id}
+                        </td>
+                        <td className="px-4 py-4 text-slate-700 whitespace-nowrap">
+                          {requestInfo.requestCode}
+                        </td>
+                        <td className="px-4 py-4 text-slate-700 whitespace-nowrap">
+                          {requestInfo.destination}
+                        </td>
+                        <td className="px-4 py-4 text-slate-600 whitespace-nowrap">
+                          {allocationInfo.vehicleLabel}
+                        </td>
+                        <td className="px-4 py-4 text-slate-600 whitespace-nowrap">
+                          {allocationInfo.driverName}
+                        </td>
+                        <td className="px-4 py-4 text-slate-600 whitespace-nowrap">
+                          {trip.actual_departure_at
+                            ? new Date(trip.actual_departure_at).toLocaleString()
+                            : "Not started"}
+                        </td>
+                        <td className="px-4 py-4 text-slate-600 whitespace-nowrap">
+                          {trip.actual_return_at
+                            ? new Date(trip.actual_return_at).toLocaleString()
+                            : "Not returned"}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                              trip.late_return
+                                ? "bg-red-50 text-red-700"
+                                : "bg-emerald-50 text-emerald-700"
+                            }`}
+                          >
+                            {trip.late_return ? "Yes" : "No"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <StatusBadge
+                            status={mapRequestStatus(requestInfo.status)}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={9}
+                      className="px-4 py-10 text-center text-sm text-slate-500"
+                    >
+                      No trip activity found for this filter.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="mt-6 flex items-center justify-between">
