@@ -56,7 +56,7 @@ export default async function StaffDashboardPage() {
               className="block transition hover:-translate-y-0.5"
             >
               <StatCard
-                label="Approved Requests"
+                label="Approved Request"
                 value={String(dashboardData.approvedRequests)}
                 helper="View approved requests"
                 icon={<CheckCircle2 className="h-5 w-5" />}
@@ -68,7 +68,7 @@ export default async function StaffDashboardPage() {
               className="block transition hover:-translate-y-0.5"
             >
               <StatCard
-                label="AI Suggestions Used"
+                label="AI Suggestions"
                 value={String(dashboardData.aiSuggestionsUsed)}
                 helper="Open request history"
                 icon={<Sparkles className="h-5 w-5" />}
