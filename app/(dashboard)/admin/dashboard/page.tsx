@@ -4,6 +4,10 @@ import {
   ClipboardList,
   Route,
   TriangleAlert,
+  Plus,
+  UserPlus,
+  ShieldCheck,
+  Truck,
 } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
@@ -57,6 +61,37 @@ async function getAdminDashboardData() {
     queue: (queueData ?? []) as QueueRow[],
   };
 }
+
+const quickActions = [
+  {
+    label: "Add Vehicle",
+    href: "/admin/vehicles/new",
+    icon: CarFront,
+    description: "Register a new vehicle",
+    iconClass: "bg-blue-50 text-blue-700",
+  },
+  {
+    label: "Add Driver",
+    href: "/admin/drivers/new",
+    icon: Truck,
+    description: "Create a driver profile",
+    iconClass: "bg-emerald-50 text-emerald-700",
+  },
+  {
+    label: "Add Staff",
+    href: "/admin/staff/new",
+    icon: UserPlus,
+    description: "Create a staff account",
+    iconClass: "bg-violet-50 text-violet-700",
+  },
+  {
+    label: "Add Approver",
+    href: "/admin/approvers/new",
+    icon: ShieldCheck,
+    description: "Create an approver account",
+    iconClass: "bg-amber-50 text-amber-700",
+  },
+];
 
 export default async function AdminDashboardPage() {
   const data = await getAdminDashboardData();
@@ -147,11 +182,11 @@ export default async function AdminDashboardPage() {
                     className="block rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:bg-slate-100"
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">
                           {item.request_code}
                         </p>
-                        <p className="mt-1 text-sm text-slate-700">
+                        <p className="mt-1 truncate text-sm text-slate-700">
                           Destination: {item.destination}
                         </p>
                       </div>
@@ -171,28 +206,48 @@ export default async function AdminDashboardPage() {
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-              Admin Notes
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Use policy, availability, and AI guidance together during allocation.
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight text-slate-950">
+                  Quick Actions
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Fast access to common admin setup tasks.
+                </p>
+              </div>
+
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+                <Plus className="h-5 w-5" />
+              </div>
+            </div>
 
             <div className="mt-5 space-y-3">
-              {[
-                "Assigned vehicles should only be released when policy permits.",
-                "Pool vehicles should be prioritized for general official duty.",
-                "AI vehicle recommendation is advisory, not absolute.",
-                "Trips with risk flags should be monitored more closely.",
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="flex items-start gap-3 rounded-2xl bg-slate-50 px-4 py-3"
-                >
-                  <div className="mt-1 h-2 w-2 rounded-full bg-blue-600" />
-                  <p className="text-sm leading-6 text-slate-600">{item}</p>
-                </div>
-              ))}
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+
+                return (
+                  <Link
+                    key={action.href}
+                    href={action.href}
+                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm"
+                  >
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${action.iconClass}`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-slate-900">
+                        {action.label}
+                      </p>
+                      <p className="truncate text-xs text-slate-500">
+                        {action.description}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>
