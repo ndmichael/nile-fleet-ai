@@ -1,6 +1,8 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
+import { Pencil, Plus } from "lucide-react";
 
 type DriverProfileRelation =
   | {
@@ -41,7 +43,7 @@ export default async function DriversPage() {
       id,
       phone,
       is_available,
-      profile:profiles(full_name, email)
+      profile:profiles!drivers_profile_id_fkey(full_name, email)
     `
     )
     .order("created_at", { ascending: false });
@@ -55,7 +57,7 @@ export default async function DriversPage() {
       subtitle="Track driver availability and assign drivers to active trips."
     >
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-slate-950">
               Driver Directory
@@ -64,6 +66,14 @@ export default async function DriversPage() {
               Operational overview of available and engaged drivers.
             </p>
           </div>
+
+          <Link
+            href="/admin/drivers/new"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-blue-700 bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4" />
+            New Driver
+          </Link>
         </div>
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200">
@@ -74,6 +84,7 @@ export default async function DriversPage() {
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Phone</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white text-sm">
@@ -82,7 +93,7 @@ export default async function DriversPage() {
                   const profile = getDriverProfileInfo(driver.profile);
 
                   return (
-                    <tr key={driver.id}>
+                    <tr key={driver.id} className="transition hover:bg-slate-50/70">
                       <td className="px-4 py-4 text-slate-700">
                         {profile.fullName}
                       </td>
@@ -103,13 +114,23 @@ export default async function DriversPage() {
                           {driver.is_available ? "Available" : "Unavailable"}
                         </span>
                       </td>
+
+                      <td className="px-4 py-4">
+                        <Link
+                          href={`/admin/drivers/${driver.id}/edit`}
+                          className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </Link>
+                      </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="px-4 py-10 text-center text-sm text-slate-500"
                   >
                     No drivers found.
