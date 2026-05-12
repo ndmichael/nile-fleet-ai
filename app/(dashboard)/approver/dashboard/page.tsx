@@ -152,7 +152,7 @@ export default async function ApproverDashboardPage() {
               </div>
 
               <Link
-                href="/dashboard/approver/requests"
+                href="/approver/requests"
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
                 View all
@@ -165,7 +165,7 @@ export default async function ApproverDashboardPage() {
                 pendingQueue.map((item) => (
                   <Link
                     key={item.id}
-                    href={`/dashboard/approver/requests/${item.id}`}
+                    href={`/approver/requests/${item.id}`}
                     className="block rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-slate-300 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                   >
                     <div className="flex items-start justify-between gap-4">
