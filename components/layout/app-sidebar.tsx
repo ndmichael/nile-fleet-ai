@@ -67,7 +67,7 @@ function formatRole(role: Role) {
     case "staff":
       return "Staff";
     case "approver":
-      return "Approver";
+      return "Review Officer";
     case "admin":
       return "Admin";
     case "driver":
