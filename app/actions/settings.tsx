@@ -8,9 +8,17 @@ export type SettingsActionState = {
   error?: string;
 };
 
-const DRIVER_PROFILE_COLUMN = "user_id"; 
-// If your drivers table uses profile_id instead, change this to:
+const DRIVER_PROFILE_COLUMN = "user_id";
+// If your drivers table uses profile_id instead, change to:
 // const DRIVER_PROFILE_COLUMN = "profile_id";
+
+function revalidateSettingsPages() {
+  revalidatePath("/", "layout");
+  revalidatePath("/staff/settings");
+  revalidatePath("/admin/settings");
+  revalidatePath("/approver/settings");
+  revalidatePath("/driver/settings");
+}
 
 export async function updateProfileSettings(
   prevState: SettingsActionState,
@@ -33,20 +41,48 @@ export async function updateProfileSettings(
     return { error: "Unable to verify authenticated user." };
   }
 
-  const { error } = await supabase
+  const { data: existingProfile, error: fetchError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (fetchError) {
+    return { error: fetchError.message };
+  }
+
+  if (!existingProfile) {
+    return {
+      error:
+        "No profile row was found for this authenticated user. The profile ID may not match the auth user ID.",
+    };
+  }
+
+  const { data: updatedProfile, error: updateError } = await supabase
     .from("profiles")
     .update({
       full_name: fullName,
     })
-    .eq("id", user.id);
+    .eq("id", user.id)
+    .select("id, full_name")
+    .maybeSingle();
 
-  if (error) {
-    return { error: error.message };
+  if (updateError) {
+    return { error: updateError.message };
   }
 
-  revalidatePath("/settings");
+  if (!updatedProfile) {
+    return {
+      error:
+        "Profile was not updated. This may be caused by a missing Supabase RLS update policy.",
+    };
+  }
 
-  return { success: "Profile updated successfully." };
+  revalidateSettingsPages();
+
+  return {
+    success: `Profile updated successfully to ${updatedProfile.full_name}.`,
+  };
 }
 
 export async function updateDriverPhoneSettings(
@@ -63,7 +99,8 @@ export async function updateDriverPhoneSettings(
 
   if (!phoneRegex.test(phone)) {
     return {
-      error: "Enter a valid phone number. Use 10 to 15 digits, with optional + at the beginning.",
+      error:
+        "Enter a valid phone number. Use 10 to 15 digits, with optional + at the beginning.",
     };
   }
 
@@ -82,9 +119,13 @@ export async function updateDriverPhoneSettings(
     .from("profiles")
     .select("role")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (profileError || !profile) {
+  if (profileError) {
+    return { error: profileError.message };
+  }
+
+  if (!profile) {
     return { error: "Profile not found." };
   }
 
@@ -92,16 +133,25 @@ export async function updateDriverPhoneSettings(
     return { error: "Only drivers can update driver contact information." };
   }
 
-  const { error } = await supabase
+  const { data: updatedDriver, error: updateError } = await supabase
     .from("drivers")
     .update({ phone })
-    .eq(DRIVER_PROFILE_COLUMN, user.id);
+    .eq(DRIVER_PROFILE_COLUMN, user.id)
+    .select("id, phone")
+    .maybeSingle();
 
-  if (error) {
-    return { error: error.message };
+  if (updateError) {
+    return { error: updateError.message };
   }
 
-  revalidatePath("/settings");
+  if (!updatedDriver) {
+    return {
+      error:
+        "Driver phone was not updated. Check whether drivers.user_id matches the authenticated user ID.",
+    };
+  }
+
+  revalidateSettingsPages();
 
   return { success: "Driver phone number updated successfully." };
 }
@@ -124,6 +174,10 @@ export async function updatePasswordSettings(
 
   if (newPassword.length < 8) {
     return { error: "New password must be at least 8 characters long." };
+  }
+
+  if (currentPassword === newPassword) {
+    return { error: "New password must be different from current password." };
   }
 
   const supabase = await createClient();
